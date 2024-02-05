@@ -527,22 +527,28 @@ export default class Imap {
             }
             const commandLength = this._incomingBuffers.reduce((prev, curr) => prev + curr.length, 0) - 2 // 2 for CRLF
             const command = new Uint8Array(commandLength)
+
             let index = 0
-            while (this._incomingBuffers.length > 0) {
-              let uint8Array = this._incomingBuffers.shift()
+            let bufferIndex = 0; // Initialize a buffer index
 
-              const remainingLength = commandLength - index
+            while (bufferIndex < this._incomingBuffers.length) {
+              let uint8Array = this._incomingBuffers[bufferIndex];
+
+              const remainingLength = commandLength - index;
+
               if (uint8Array.length > remainingLength) {
-                const excessLength = uint8Array.length - remainingLength
-                uint8Array = uint8Array.subarray(0, -excessLength)
+                const excessLength = uint8Array.length - remainingLength;
+                uint8Array = uint8Array.subarray(0, remainingLength);
 
-                if (this._incomingBuffers.length > 0) {
-                  this._incomingBuffers = []
-                }
+                // Clear the remaining buffers as they are no longer needed
+                this._incomingBuffers.splice(bufferIndex + 1); // Remove elements starting from the next index
               }
-              command.set(uint8Array, index)
-              index += uint8Array.length
+
+              command.set(uint8Array, index);
+              index += uint8Array.length;
+              bufferIndex++; // Move to the next buffer
             }
+
             yield command
             if (LFidx < buf.length - 1) {
               buf = new Uint8Array(buf.subarray(LFidx + 1))
